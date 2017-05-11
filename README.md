@@ -7,7 +7,7 @@ This repo helps to replace the allele counts in maf file after genotyping
 [![Build Status](https://travis-ci.org/rhshah/replace_allele_counts.svg?branch=master)](https://travis-ci.org/rhshah/replace_allele_counts)
 [![codecov](https://codecov.io/gh/rhshah/replace_allele_counts/branch/master/graph/badge.svg)](https://codecov.io/gh/rhshah/replace_allele_counts)
 
-## remove_variants.py
+## replace_allele_counts.py
 #### Based on Mutation Annotation Format ([MAF](https://wiki.nci.nih.gov/display/TCGA/Mutation+Annotation+Format+%28MAF%29+Specification))
 - Takes in a MAF with FillOut based on GetBaseCountsMultiSample and outputs a MAF (Note: You will loose the comments if any present in the MAF file)
 
