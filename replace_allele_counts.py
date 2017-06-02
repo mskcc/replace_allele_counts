@@ -2,7 +2,7 @@
 '''
 @Description : This tool helps to replace the allele counts from the caller with the allele counts of GetBaseCountMultiSample
 @Created :  05/10/2017
-@Updated : 05/10/2017
+@Updated : 06/01/2017
 @author : Ronak H Shah
 
 '''
@@ -34,7 +34,7 @@ def main():
    parser = argparse.ArgumentParser(prog='replace_allele_counts.py', description='This tool helps to replace the allele counts from the caller with the allele counts of GetBaseCountMultiSample', usage='%(prog)s [options]')
    parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="make lots of noise")
    parser.add_argument("-imaf", "--input-maf", action="store", dest="inputMaf", required=True, type=str, metavar='SomeID.maf', help="Input maf file which needs to be fixed")
-   parser.add_argument("-ifill","--fillout", action="store", dest="fillout", required=True, type=str, metavar='SomeID.fillout.txt', help="Input fillout file created by GetBaseCountMultiSample using the input maf")
+   parser.add_argument("-ifill","--fillout", action="store", dest="fillout", required=True, type=str, metavar='SomeID.fillout.maf', help="Input fillout file created by GetBaseCountMultiSample using the input maf")
    parser.add_argument("-omaf","--output-maf", action="store", dest="outputMaf", required=True, type=str, metavar='SomeID.maf', help="Output maf file name")
    parser.add_argument("-o", "--outDir", action="store", dest="outdir", required=False, type=str, metavar='/somepath/output', help="Full Path to the output dir.")
    
@@ -57,55 +57,16 @@ def read_fillout(args):
     dataDF = pd.read_table(args.fillout, comment="#", low_memory=False)
     return(dataDF)
 
-def get_index_for_fillout(filloutDF,m_chr,m_start,m_end,m_ref,m_alt):
-    dataDF = filloutDF.loc[filloutDF['Chrom'] == m_chr]
-    count = 0
-    for index, row in dataDF.iterrows():
-        
-        vcf_chr = row.loc['Chrom']
-        vcf_start = row.loc['Start']
-        vcf_ref = (str(row.loc['Ref'])).rstrip()
-        vcf_alt = (str(row.loc['Alt'])).rstrip()
-        
-        #Skip Complex
-        if(len(vcf_ref) >= 2 and len(vcf_alt) >= 2 and (len(vcf_ref) != len(vcf_alt))):
-            #print "Skipping",vcf_chr,vcf_start,vcf_ref,vcf_alt,m_chr,m_start,m_end,m_ref,m_alt,"\n"
-            continue
-        start = None
-        end = None
-        ref = None
-        alt = None
-        #SNV,DNP,ONP
-        if(len(vcf_ref) == len(vcf_alt)):
-            start = int(vcf_start)
-            end = int(vcf_start) + len(vcf_ref) - 1
-            ref = vcf_ref
-            alt = vcf_alt
-        else:
-            #DELETIONS
-            if(len(vcf_ref) > len(vcf_alt)):
-                ref = vcf_ref[1:]
-                if(len(vcf_alt) == 1):
-                    alt = "-"
-                if(len(vcf_alt) > 1):
-                    alt = vcf_alt[1:]
-                start = int(vcf_start) + 1
-                end = int(vcf_start) + len(ref)
-            #INSERTIONS
-            if(len(vcf_ref) < len(vcf_alt)):
-                if(len(vcf_ref) == 1):
-                   ref = "-"
-                if(len(vcf_ref) > 1):
-                    ref = vcf_ref[1:]
-                alt = vcf_alt[1:]
-                start = int(vcf_start)
-                end = int(vcf_start + 1)
-        #print "IN:",vcf_chr,vcf_start,vcf_ref,vcf_alt,"Mod:",start,ref,alt,"MAF:",m_chr,m_start,m_end,m_ref,m_alt,"\n"
-        if(m_start == start and m_end == end and m_ref == ref and m_alt == alt):
-            #print index
-            return(index)
-        else:
-            continue
+def get_index_for_fillout(filloutDF,m_chr,m_start,m_end,m_ref,m_alt, m_sample_name):
+    index = None
+    index = filloutDF[(filloutDF['Chromosome'] == m_chr) & 
+                           (filloutDF['Tumor_Sample_Barcode'].str.contains(m_sample_name)) & 
+                           (filloutDF['Start_Position'] == m_start) & 
+                           (filloutDF['End_Position'] == m_end) & 
+                           (filloutDF['Reference_Allele'] == m_ref) & 
+                           (filloutDF['Tumor_Seq_Allele1'] == m_alt)].index.tolist()[0]
+    return(index)
+    
 
 def replace_allele_count(args,mafDF,filloutDF):
     mafDF_copy = mafDF.copy()
@@ -119,27 +80,23 @@ def replace_allele_count(args,mafDF,filloutDF):
         m_alt = (str(i_row.loc['Tumor_Seq_Allele2'])).rstrip()
         m_tumor_sample_name = i_row.loc['Tumor_Sample_Barcode']
         m_normal_sample_name = i_row.loc['Matched_Norm_Sample_Barcode']
-        if(len(m_ref) >= 2 and len(m_alt) >= 2 and (len(m_ref) != len(m_alt))):
+        
+        #if(len(m_ref) >= 2 and len(m_alt) >= 2 and (len(m_ref) != len(m_alt))):
+        if(m_type == "Complex"):
             logging.warn("replace_allele_counts: Skipping as complex event: %s, %d, %d, %s, %s", m_chr, m_start, m_end, m_ref, m_alt)
             continue
         else:
-            filloutIndex = get_index_for_fillout(filloutDF, m_chr, m_start, m_end, m_ref, m_alt)
-            if(filloutIndex != None):
-                recordToReplace = filloutDF.iloc[[filloutIndex]]
-                tcols = [col for col in recordToReplace.columns if m_tumor_sample_name in col]
-                tcolName = tcols[0]
-                ncols = [col for col in recordToReplace.columns if m_normal_sample_name in col]
-                ncolName = ncols[0]
-                t_record = recordToReplace.iloc[0][tcolName]
-                tsampleDat=dict([x.split("=") for x in t_record.split(";")])
-                n_record = recordToReplace.iloc[0][ncolName]
-                nsampleDat=dict([x.split("=") for x in n_record.split(";")])
-                mafDF_copy.set_value(i_index,"t_depth",tsampleDat.get("DP"))
-                mafDF_copy.set_value(i_index,"t_ref_count",tsampleDat.get("RD"))
-                mafDF_copy.set_value(i_index,"t_alt_count",tsampleDat.get("AD"))
-                mafDF_copy.set_value(i_index,"n_depth",nsampleDat.get("DP"))
-                mafDF_copy.set_value(i_index,"n_ref_count",nsampleDat.get("RD"))
-                mafDF_copy.set_value(i_index,"n_alt_count",nsampleDat.get("AD"))
+            filloutIndexTumor = get_index_for_fillout(filloutDF, m_chr, m_start, m_end, m_ref, m_alt, m_tumor_sample_name)
+            filloutIndexNormal = get_index_for_fillout(filloutDF, m_chr, m_start, m_end, m_ref, m_alt, m_normal_sample_name)
+            if(filloutIndexTumor != None and filloutIndexNormal != None):
+                #tumor_recordToReplace = filloutDF.iloc[[filloutIndexTumor]]
+                #normal_recordToReplace = filloutDF.iloc[[filloutIndexNormal]]
+                mafDF_copy.set_value(i_index,"t_depth",filloutDF.get_value(filloutIndexTumor,"t_total_count"))
+                mafDF_copy.set_value(i_index,"t_ref_count",filloutDF.get_value(filloutIndexTumor,"t_ref_count"))
+                mafDF_copy.set_value(i_index,"t_alt_count",filloutDF.get_value(filloutIndexTumor,"t_alt_count"))
+                mafDF_copy.set_value(i_index,"n_depth",filloutDF.get_value(filloutIndexNormal,"t_total_count"))
+                mafDF_copy.set_value(i_index,"n_ref_count",filloutDF.get_value(filloutIndexNormal,"t_ref_count"))
+                mafDF_copy.set_value(i_index,"n_alt_count",filloutDF.get_value(filloutIndexNormal,"t_alt_count"))
             else:
                 logging.warn("replace_allele_counts: Skipping as could not find index in fillout as conversion of vcf to maf failed: %s, %d, %d, %s, %s", m_chr, m_start, m_end, m_ref, m_alt)
                 continue

@@ -17,11 +17,11 @@ def setup_module():
     this_dir, this_filename = os.path.split(__file__)
     new_dir = os.path.dirname(this_dir)
     inputFileMaf = os.path.join(new_dir, "data", "sample_input", "sample_input.maf")
-    inputFill = os.path.join(new_dir, "data", "sample_input", "sample_input_fill.txt")
+    inputFillMaf = os.path.join(new_dir, "data", "sample_input", "sample_input_fill.maf")
     outFileMaf = os.path.join(new_dir, "sample_output.maf")
     cmpFileMaf = os.path.join(new_dir, "data", "sample_output", "sample_output.maf")
     scriptFile = os.path.join(new_dir, "replace_allele_counts.py")
-    cmd = "python " + scriptFile + " -v -imaf " + inputFileMaf + " -ifill " + inputFill + " -omaf " + outFileMaf
+    cmd = "python " + scriptFile + " -v -imaf " + inputFileMaf + " -ifill " + inputFillMaf + " -omaf " + outFileMaf
     args = shlex.split(cmd)
     if(os.path.isfile(outFileMaf)):
         os.remove(outFileMaf)
