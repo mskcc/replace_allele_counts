@@ -14,12 +14,12 @@ import time
 import logging
 import multiprocessing
 
-#try:
-#    import coloredlogs
-#    coloredlogs.install(level='DEBUG')
-#except ImportError:
-#    logger.warning("replace_allele_counts: coloredlogs is not installed, please install it if you wish to see color in logs on standard out.")
-#    pass
+try:
+    import coloredlogs
+    coloredlogs.install(level='DEBUG')
+except ImportError:
+    logger.warning("replace_allele_counts: coloredlogs is not installed, please install it if you wish to see color in logs on standard out.")
+    pass
 try:
     import numpy as np
     import pandas as pd
