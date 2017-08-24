@@ -9,7 +9,7 @@
 from __future__ import division
 import argparse
 import sys
-import os
+import os, io
 import time
 import logging
 import multiprocessing
@@ -54,7 +54,7 @@ def main():
    pool.join()
    while not q.empty():
        dataframes.append(q.get())
-   write_output(args,dataframes)
+   write_output(args,dataframes, pd.Series(mafDF['Chromosome']).unique())
    if(args.verbose):
        logger.info("replace_allele_counts: Finished the run for replacing allele counts.")
 
@@ -135,12 +135,16 @@ def replace_allele_count(args,mafDF,filloutDF,q):
     q.put(mafDF_copy)
     return True 
 
-def write_output(args,frames):
+def write_output(args,frames, orig_chrom_order):
     if(args.outdir):
         outFile = os.path.join(args.outdir,args.outputMaf)
     else:
         outFile = os.path.join(os.getcwd(),args.outputMaf)
-    pd.concat(frames).to_csv(outFile, sep='\t', index=False)
+    fh = io.open(outFile, "wb")
+    bigDF = pd.concat(frames)
+    bigDF[bigDF['Chromosome']==orig_chrom_order[0]].sort_values(["Start_Position", "End_Position"], ascending=True).to_csv(fh, sep='\t', index=False)
+    for chrom in orig_chrom_order[1:]:
+        bigDF[bigDF['Chromosome']==chrom].sort_values(["Start_Position", "End_Position"], ascending=True).to_csv(fh, sep='\t', index=False, header=False)
     
 if __name__ == "__main__":
     logger = logging.getLogger('replace_allele_counts')
