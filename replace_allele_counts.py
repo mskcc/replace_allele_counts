@@ -14,6 +14,17 @@ import time
 import logging
 import multiprocessing
 
+
+logger = logging.getLogger('replace_allele_counts')
+logger.propagate=False
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+ch=logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+
 try:
     import coloredlogs
     coloredlogs.install(level='DEBUG')
@@ -34,6 +45,7 @@ def main():
    parser.add_argument("-ifill","--fillout", action="store", dest="fillout", required=True, type=str, metavar='SomeID.fillout.maf', help="Input fillout file created by GetBaseCountMultiSample using the input maf")
    parser.add_argument("-omaf","--output-maf", action="store", dest="outputMaf", required=True, type=str, metavar='SomeID.maf', help="Output maf file name")
    parser.add_argument("-o", "--outDir", action="store", dest="outdir", required=False, type=str, metavar='/somepath/output', help="Full Path to the output dir.")
+   parser.add_argument("-n", "--num-threads", action="store", required=False, type=int, metavar='/somepath/output', help="number of threads to use to do merge (default 5)", default=5)
    
    args = parser.parse_args()
    logger.info("Reading Maf...")
@@ -44,7 +56,7 @@ def main():
    logger.info("Rewriting fillout lines into maf...")
    group_size = len(mafDF.index) / 10 
    dataframes = []
-   pool = multiprocessing.Pool(processes=5)
+   pool = multiprocessing.Pool(processes=args.num_threads)
    m = multiprocessing.Manager()
    q = m.Queue()
    for g, df in mafDF.groupby(np.arange(len(mafDF)) // group_size):
@@ -147,15 +159,6 @@ def write_output(args,frames, orig_chrom_order):
         bigDF[bigDF['Chromosome']==chrom].sort_values(["Start_Position", "End_Position"], ascending=True).to_csv(fh, sep='\t', index=False, header=False)
     
 if __name__ == "__main__":
-    logger = logging.getLogger('replace_allele_counts')
-    logger.propagate=False
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    ch=logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-
     start_time = time.time()  
     main()
     end_time = time.time()
