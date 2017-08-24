@@ -11,7 +11,7 @@ with open('LICENSE') as f:
 
 setup(
     name='replace_allele_counts',
-    version='0.1.1',
+    version='0.2.0',
     description='Package for replaceing allele counts in maf using a fill out produce with GetBaseCountMultiSample',
     long_description=readme,
     author='Ronak Shah',
