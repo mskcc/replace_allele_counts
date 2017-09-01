@@ -45,7 +45,7 @@ def main():
    parser.add_argument("-ifill","--fillout", action="store", dest="fillout", required=True, type=str, metavar='SomeID.fillout.maf', help="Input fillout file created by GetBaseCountMultiSample using the input maf")
    parser.add_argument("-omaf","--output-maf", action="store", dest="outputMaf", required=True, type=str, metavar='SomeID.maf', help="Output maf file name")
    parser.add_argument("-o", "--outDir", action="store", dest="outdir", required=False, type=str, metavar='/somepath/output', help="Full Path to the output dir.")
-   parser.add_argument("-n", "--num-threads", action="store", required=False, type=int, metavar='/somepath/output', help="number of threads to use to do merge (default 5)", default=5)
+   parser.add_argument("-n", "--num-threads", action="store", required=False, type=int, metavar='/somepath/output', help="number of threads to use to do merge (default 2)", default=2)
    
    args = parser.parse_args()
    logger.info("Reading Maf...")
